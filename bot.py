@@ -7,13 +7,13 @@ sys.path.append("./libs/")
 bot = discord.Bot(intents=discord.Intents.all())
 
 ###
-userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36"
-bitlyUsername = ""
-bitlyPassword = ""
-discordBotToken = ""
+USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36"
+bitly_username = ""
+bitly_password = ""
+discord_token = ""
 ###
 
-tikTokDomains = (
+TIKTOK_DOMAINS = (
     'http://vt.tiktok.com', 'http://app-va.tiktokv.com', 'http://vm.tiktok.com', 'http://m.tiktok.com', 'http://tiktok.com', 'http://www.tiktok.com', 'http://link.e.tiktok.com', 'http://us.tiktok.com',
     'https://vt.tiktok.com', 'https://app-va.tiktokv.com', 'https://vm.tiktok.com', 'https://m.tiktok.com', 'https://tiktok.com', 'https://www.tiktok.com', 'https://link.e.tiktok.com', 'https://us.tiktok.com'
 )
@@ -29,9 +29,9 @@ async def on_command_error(ctx, error):
         return
     raise error
 
-def getToken(url):
+def get_token(url):
     try:
-        response = requests.post('https://musicaldown.com/', headers={"user-agent":userAgent})
+        response = requests.post('https://musicaldown.com/', headers={"user-agent":USER_AGENT})
         
         cookies = response.cookies
         soup = BeautifulSoup(response.content, 'html.parser').find_all('input')
@@ -47,21 +47,21 @@ def getToken(url):
     except Exception:
         return None, None, None
 
-async def getVideo(url):
+async def get_video(url):
     #print("getting video '" + url + "'")
     # credits to developedbyalex
     if not url.startswith('http'):
         url = 'https://' + url
 
-    if url.lower().startswith(tikTokDomains):
+    if url.lower().startswith(TIKTOK_DOMAINS):
         url = url.split('?')[0]
         
-        status, cookies, data = getToken(url)
+        status, cookies, data = get_token(url)
 
         if status:
             headers = {
                 'Cookie': f"session_data={cookies['session_data']}",
-                'User-Agent': userAgent,
+                'User-Agent': USER_AGENT,
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
                 'Accept-Language': 'en-US,en;q=0.5',
                 'Accept-Encoding': 'gzip, deflate',
@@ -162,9 +162,9 @@ async def getVideo(url):
     else:
         return {'valid': False,'error': 'invalidUrl'}
 
-def shortenURL(url):
+def shorten_url(url):
     try:
-        auth_res = requests.post("https://api-ssl.bitly.com/oauth/access_token", auth=(bitlyUsername, bitlyPassword))
+        auth_res = requests.post("https://api-ssl.bitly.com/oauth/access_token", auth=(bitly_username, bitly_password))
         access_token = auth_res.content.decode()
         headers = {"Authorization": f"Bearer {access_token}"}
         groups_res = requests.get("https://api-ssl.bitly.com/v4/groups", headers=headers)
@@ -176,14 +176,14 @@ def shortenURL(url):
     except:
         return url
 
-def checkURL(message):
-    for link in tikTokDomains:
+def check_url(message):
+    for link in TIKTOK_DOMAINS:
         if link in message:
             return True
     return False
 
 # Find parameter on url_site
-def getParameter():
+def get_parameter():
 
     # Variable
     token = ""
@@ -287,16 +287,16 @@ def get_url_video(html_page):
     return url_download_video
 
 
-async def getPhotoInfo(url):
+async def get_photo_info(url):
     r = requests.get(url)
     soup = BeautifulSoup(r.text,"html.parser")
     resp = json.loads(soup.find("script",id="__UNIVERSAL_DATA_FOR_REHYDRATION__").text)
     if "webapp.video-detail" not in resp["__DEFAULT_SCOPE__"]:
         print("webapp.video-detail not in vid",url)
-        photoInfo = await getVideo(url)
+        photoInfo = await get_video(url)
 
         # snaptik
-        token = getParameter()
+        token = get_parameter()
 
         # Make req server 
         response = make_req_server(token = token, url_video = url)
@@ -340,21 +340,21 @@ async def on_message(message):
 
     if "tiktok.com" in message.content:
 
-        hasUrl = False
+        has_url = False
         
-        for domain in tikTokDomains:
+        for domain in TIKTOK_DOMAINS:
             if domain in message.content.strip():
-                hasUrl = True
+                has_url = True
 
-        if hasUrl == False:
+        if has_url == False:
             return
             
         message.content = message.content.strip()
         
         await message.add_reaction('🔁')
         try:
-            if (checkURL(message.content)):
-                tikTok = await getVideo(message.content)
+            if (check_url(message.content)):
+                tikTok = await get_video(message.content)
                 
                 if tikTok["valid"] != True:
                     print(tikTok)
@@ -372,7 +372,7 @@ async def on_message(message):
                 description += "\n\n:link:: <"+message.content+">"
 
                 if tikTok["is_video"] == False:
-                    photoInfo = await getPhotoInfo(message.content)
+                    photoInfo = await get_photo_info(message.content)
 
                     #download cover photo
                     cover = requests.get(photoInfo["cover"])
@@ -444,7 +444,7 @@ async def on_message(message):
                         break
                 
                 if not sentBackup:
-                    bitty = shortenURL(tikTok["items"][0])
+                    bitty = shorten_url(tikTok["items"][0])
                     await message.channel.send(description + bitty)
 
                 try:
@@ -460,4 +460,4 @@ async def on_message(message):
             except:
                 pass
 
-bot.run(discordBotToken)
+bot.run(discord_token)
